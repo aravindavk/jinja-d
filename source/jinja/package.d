@@ -33,6 +33,8 @@ class Jinja
             return result;
         case "JinjaTemplate.Text":
             return parsedTmpl.matches[0];
+        case "JinjaTemplate.Comment":
+            return "";
         default:
             return "";
         }
@@ -55,4 +57,5 @@ unittest
 {
     auto view = new Jinja;
     assert(view.render("Hello World!") == "Hello World!", view.render("Hello World!"));
+    assert(view.render("Hello World!{# This is comment #}") == "Hello World!");
 }

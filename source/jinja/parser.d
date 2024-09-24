@@ -6,8 +6,9 @@ import pegged.examples.numbers;
 
 enum jinjaTemplateGrammer = `
 JinjaTemplate:
-  Template           <- Text
+  Template           <- (Text / Comment)+
   Text               <~ (!(OpenInterpolation / OpenStatement / OpenComment) .)+
+  Comment            <- OpenComment (!CloseComment .)+ CloseComment
   OpenInterpolation  <- "{{"
   CloseInterpolation <- "}}"
   OpenStatement      <- "{%"

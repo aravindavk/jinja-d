@@ -4,9 +4,12 @@ import std.file;
 import std.path;
 import std.json;
 import std.string;
+import std.typecons;
 
 import pegged.grammar;
+
 import jinja.parser;
+import jinja.filters;
 
 enum MissingKey
 {
@@ -18,7 +21,7 @@ enum MissingKey
 struct JinjaSettings
 {
     string viewsDirectory = "views";
-    MissingKey onMissingKey = MissingKey.passThrough;
+    MissingKey onMissingKey = MissingKey.empty;
 }
 
 class JinjaException : Exception
@@ -28,13 +31,41 @@ class JinjaException : Exception
     }
 }
 
+JSONValue deepCopy(ref JSONValue val)
+{
+    JSONValue newVal;
+    switch(val.type)
+    {
+        case JSONType.string:
+            newVal = JSONValue(val.str.idup);
+            break;
+        case JSONType.object:
+            foreach (string key, value; val)
+            {
+                newVal[key] = value.deepCopy;
+            }
+            break;
+        case JSONType.array:
+            foreach (size_t index, value; val)
+            {
+                newVal[index] = value.deepCopy;
+            }
+            break;
+        default:
+            newVal = val;
+
+    }
+    return newVal;
+}
+
 struct JinjaData
 {
     JSONValue data;
 
     JSONValue get(string name, JSONValue scopeData = JSONValue())
     {
-        auto _data = data;
+        JSONValue _data = data.deepCopy;
+
         // When extra data is passed that takes the precedence
         if (!scopeData.isNull)
         {
@@ -58,13 +89,27 @@ struct JinjaData
         }
 
         // Regular key name lookup
-        if (name in _data)
-            return _data[name];
+        if (!_data.isNull)
+        {
+            if (name in _data)
+                return _data[name];
+        }
 
         // Null value
         return JSONValue();
     }
+
+    JinjaData updated(JSONValue extraData)
+    {
+        auto _data = data.deepCopy;
+        foreach(k, v; extraData.object)
+            _data[k] = v;
+
+        return JinjaData(_data);
+    }
 }
+
+alias Filter = Tuple!(string, "name", string[], "args");
 
 class Jinja
 {
@@ -75,11 +120,64 @@ class Jinja
         this.settings = settings;
     }
 
+    private string interpolationParser(ParseTree parsedTmpl, JinjaData data)
+    {
+        string expression;
+        Filter[] filters;
+
+        foreach(child; parsedTmpl.children)
+        {
+            if (child.name == "JinjaTemplate.Expression")
+                expression = child.matches[0];
+            else if (child.name == "JinjaTemplate.Filter")
+            {
+                // Example of a Filter with Args
+                // +-JinjaTemplate.Filter[16, 33]["|", "default", "(", "\"ABCD\"", ")"]
+                //   |  +-JinjaTemplate.FilterStart[16, 17]["|"]
+                //   |  +-JinjaTemplate.FilterName[17, 24]["default"]
+                //   |  +-JinjaTemplate.FilterArgs[24, 32]["(", "\"ABCD\"", ")"]
+                //     |     +-JinjaTemplate.OpenParen[24, 25]["("]
+                //     |     +-JinjaTemplate.FilterArg[25, 31]["\"ABCD\""]
+                //     |     +-JinjaTemplate.CloseParen[31, 32][")"]
+                Filter f;
+                // children[1] is FilterName
+                foreach(filterChild; child.children)
+                {
+                    if (filterChild.name == "JinjaTemplate.FilterName")
+                        f.name = filterChild.matches[0];
+                    else if (filterChild.name == "JinjaTemplate.FilterArgs")
+                    {
+                        foreach(argChild; filterChild.children)
+                        {
+                            if (argChild.name == "JinjaTemplate.FilterArg")
+                                f.args ~= argChild.matches[0];
+                        }
+                    }
+                }
+                filters ~= f;
+            }
+        }
+
+        auto expressionValue = data.get(expression);
+        foreach(filter; filters)
+        {
+            expressionValue = _registeredFilters[filter.name](expressionValue, filter.args);
+        }
+
+        if (expressionValue.isNull)
+        {
+            if (settings.onMissingKey == MissingKey.empty)
+                return "";
+            else if (settings.onMissingKey == MissingKey.passThrough)
+                return parsedTmpl.matches.join;
+            else
+                throw new JinjaException(expression ~ " not found in the data");
+        }
+        return expressionValue.str;
+    }
+
     private string parse(ParseTree parsedTmpl, JinjaData data)
     {
-        import std.stdio;
-        writeln(parsedTmpl);
-
         switch(parsedTmpl.name)
         {
         case "JinjaTemplate":
@@ -101,23 +199,7 @@ class Jinja
             }
             return "";
         case "JinjaTemplate.Interpolation":
-            string expression;
-            foreach(child; parsedTmpl.children)
-            {
-                if (child.name == "JinjaTemplate.Expression")
-                    expression = child.matches[0];
-            }
-            auto expressionValue = data.get(expression);
-            if (expressionValue.isNull)
-            {
-                if (settings.onMissingKey == MissingKey.empty)
-                    return "";
-                else if (settings.onMissingKey == MissingKey.passThrough)
-                    return parsedTmpl.matches.join;
-                else
-                    throw new JinjaException(expression ~ " not found in the data");
-            }
-            return expressionValue.str;
+            return interpolationParser(parsedTmpl, data);
         default:
             return "";
         }
@@ -164,4 +246,19 @@ After Raw.
     JSONValue data2;
     data2["name"] = "World";
     assert(view.render(tmpl2, data2) == expect2, view.render(tmpl2, data2));
+
+    auto tmpl3 = `Hello {{ name|capitalize }}!`;
+
+    auto expect3 = `Hello World!`;
+
+    JSONValue data3;
+    data3["name"] = "world";
+    assert(view.render(tmpl3, data3) == expect3, view.render(tmpl3, data3));
+
+    auto tmpl4 = `Hello {{ unknown|default("ABCD") }}!`;
+
+    auto expect4 = `Hello ABCD!`;
+
+    JSONValue data4;
+    assert(view.render(tmpl4, data4) == expect4, view.render(tmpl4, data4));
 }

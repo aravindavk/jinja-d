@@ -6,7 +6,7 @@ import pegged.examples.numbers;
 
 enum jinjaTemplateGrammer = `
 JinjaTemplate:
-  Template           <- (Text / Comment / RawStatement)+
+  Template           <- (Text / Comment / RawStatement / Interpolation)+
   Text               <~ (!(OpenInterpolation / OpenStatement / OpenComment) .)+
   Comment            <- OpenComment (!CloseComment .)+ CloseComment
   RawStatement       <- OpenRaw RawText CloseRaw
@@ -19,6 +19,17 @@ JinjaTemplate:
   CloseStatement     <- "%}"
   OpenComment        <- "{#"
   CloseComment       <- "#}"
+  OpenParen          <- "("
+  CloseParen         <- ")"
+  Interpolation      <  OpenInterpolation Expression Filter* CloseInterpolation
+  Expression         <~ String / identifier / Number
+  Number             <- [0-9]+
+  Filter             <- FilterStart FilterName FilterArgs*
+  FilterName         <- identifier
+  FilterStart        <- "|"
+  FilterArgSep       <- ","
+  FilterArg          <- String / Number / identifier / (!FilterArgSep !CloseParen !blank .)+
+  FilterArgs         <- OpenParen FilterArg (FilterArgSep FilterArg)* CloseParen
 `;
 
 mixin(grammar(jinjaTemplateGrammer));
@@ -31,3 +42,4 @@ unittest
     +-JinjaTemplate.Text[0, 12]["Hello World!"]
 `);
 }
+

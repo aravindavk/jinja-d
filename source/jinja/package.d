@@ -35,6 +35,13 @@ class Jinja
             return parsedTmpl.matches[0];
         case "JinjaTemplate.Comment":
             return "";
+        case "JinjaTemplate.RawStatement":
+            foreach(child; parsedTmpl.children)
+            {
+                if (child.name == "JinjaTemplate.RawText")
+                    return child.matches[0];
+            }
+            return "";
         default:
             return "";
         }
@@ -58,4 +65,19 @@ unittest
     auto view = new Jinja;
     assert(view.render("Hello World!") == "Hello World!", view.render("Hello World!"));
     assert(view.render("Hello World!{# This is comment #}") == "Hello World!");
+    auto tmpl1 = `Hello World!
+{% raw %}
+{# this is comment #}
+{{ name }}
+{% endraw %}
+After Raw.
+`;
+
+    auto expect1 = `Hello World!
+{# this is comment #}
+{{ name }}
+After Raw.
+`;
+
+    assert(view.render(tmpl1) == expect1, view.render(tmpl1));
 }

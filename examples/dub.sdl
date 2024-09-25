@@ -1,0 +1,6 @@
+name "examples"
+description "Jinja template examples"
+authors "Aravinda VK"
+copyright "Copyright © 2024, Aravinda VK"
+license "MIT"
+dependency "jinja" path="../"

@@ -5,7 +5,10 @@ import std.json;
 
 string sanitizeString(string value)
 {
-    return value.strip("\"");
+    if (value.startsWith("\"") && value.endsWith("\""))
+        return value.chompPrefix("\"").chomp("\"");
+
+    return value;
 }
 
 JSONValue filterCapitalize(JSONValue value, string[] args)

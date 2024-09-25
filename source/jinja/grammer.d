@@ -1,10 +1,10 @@
-module jinja.parser;
+module jinja.grammer;
 
 import pegged.grammar;
 import pegged.examples.strings;
 import pegged.examples.numbers;
 
-enum jinjaTemplateGrammer = `
+enum JinjaTemplateGrammer = `
 JinjaTemplate:
   Template           <- (Text / Comment / RawStatement / Interpolation)+
   Text               <~ (!(OpenInterpolation / OpenStatement / OpenComment) .)+
@@ -31,15 +31,3 @@ JinjaTemplate:
   FilterArg          <- String / Number / identifier / (!FilterArgSep !CloseParen !blank .)+
   FilterArgs         <- OpenParen FilterArg (FilterArgSep FilterArg)* CloseParen
 `;
-
-mixin(grammar(jinjaTemplateGrammer));
-
-unittest
-{
-    auto tmpl = JinjaTemplate("Hello World!");
-    assert(tmpl.toString == `JinjaTemplate[0, 12]["Hello World!"]
- +-JinjaTemplate.Template[0, 12]["Hello World!"]
-    +-JinjaTemplate.Text[0, 12]["Hello World!"]
-`);
-}
-

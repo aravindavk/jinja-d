@@ -1,0 +1,7 @@
+{
+	"fileVersion": 1,
+	"versions": {
+		"jinja": {"path":"../"},
+		"pegged": "0.4.9"
+	}
+}

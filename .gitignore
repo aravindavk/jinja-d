@@ -15,3 +15,4 @@ jinja-test-*
 *.obj
 *.lst
 *.a
+jinja_parsergen

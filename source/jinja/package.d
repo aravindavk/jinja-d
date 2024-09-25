@@ -20,11 +20,7 @@ class Jinja
     
     string render(string tmpl, JSONValue data = JSONValue())
     {
-        import std.stdio;
-        writeln("TMPL: ", tmpl, "DATA: ", data);
-
         auto parsedTmpl = JinjaTemplate(tmpl);
-        writeln("PARSED: ", parsedTmpl, "DATA: ", data);
         version (ShowParsedTree)
         {
             import std.stdio;
@@ -42,6 +38,13 @@ class Jinja
     static void registerFilter(string name, FilterFunction func)
     {
         _registeredFilters[name] = func;
+    }
+
+    static renderString(string tmpl, JSONValue data = JSONValue())
+    {
+        auto parsedTmpl = JinjaTemplate(tmpl);
+        JinjaSettings settings_;
+        return parse(settings_, parsedTmpl, JinjaData(data));
     }
 }
 
@@ -83,13 +86,6 @@ After Raw.
     data3["name"] = "world";
     assert(view.render(tmpl3, data3) == expect3, view.render(tmpl3, data3));
 
-    auto tmpl4 = `Hello {{ unknown|default("ABCD") }}!`;
-
-    auto expect4 = `Hello ABCD!`;
-
-    JSONValue data4;
-    assert(view.render(tmpl4, data4) == expect4, view.render(tmpl4, data4));
-
     auto tmpl5 = `Hello {{ unknown|default(100) }}!`;
 
     auto expect5 = `Hello 100!`;
@@ -97,4 +93,9 @@ After Raw.
     JSONValue data5;
     auto view2 = new Jinja;
     assert(view2.render(tmpl5, data5) == expect5, view2.render(tmpl5, data5));
+
+    auto tmpl4 = `Hello {{ unknown|default("ABCD") }}!`;
+    auto expect4 = `Hello ABCD!`;
+    JSONValue data4;
+    assert(view.render(tmpl4, data4) == expect4, view.render(tmpl4, data4));
 }

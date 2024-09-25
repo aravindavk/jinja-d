@@ -1,11 +1,11 @@
 JinjaTemplate:
   Template           <- (Text / Comment / RawStatement / Interpolation)+
-  Text               <~ (!(OpenInterpolation / OpenStatement / OpenComment) .)+
+  Text               <- ~(!(OpenInterpolation / OpenStatement / OpenComment) .)+
   Comment            <- OpenComment (!CloseComment .)+ CloseComment
   RawStatement       <- OpenRaw RawText CloseRaw
   RawText            <~ blank* (!CloseRaw .)+ blank*
-  OpenRaw            < OpenStatement "raw" CloseStatement
-  CloseRaw           < OpenStatement "endraw" CloseStatement
+  OpenRaw            <  OpenStatement "raw" CloseStatement
+  CloseRaw           <  OpenStatement "endraw" CloseStatement
   OpenInterpolation  <- "{{"
   CloseInterpolation <- "}}"
   OpenStatement      <- "{%"
@@ -15,11 +15,25 @@ JinjaTemplate:
   OpenParen          <- "("
   CloseParen         <- ")"
   Interpolation      <  OpenInterpolation Expression Filter* CloseInterpolation
-  Expression         <~ String / identifier / Number
-  Number             <- [0-9]+
-  Filter             <- FilterStart FilterName FilterArgs*
-  FilterName         <- identifier
-  FilterStart        <- "|"
-  FilterArgSep       <- ","
-  FilterArg          <- String / Number / identifier / (!FilterArgSep !CloseParen !blank .)+
-  FilterArgs         <- OpenParen FilterArg (FilterArgSep FilterArg)* CloseParen
+  Expression         <~ (!FilterStart !CloseInterpolation !blank .)+
+  Number             <  ~(Digit+)
+  Digit              <  [0-9]
+  Filter             <  FilterStart FilterName FilterArgs*
+  FilterName         <  identifier
+  FilterStart        <  "|"
+  FilterArgSep       <  ","
+  FilterArg          <  String / Number / identifier / (!FilterArgSep !CloseParen !blank .)+
+  FilterArgs         <  OpenParen FilterArg (FilterArgSep FilterArg)* CloseParen
+  Dict               <  '{' (Pair (',' Pair)*)? '}'
+  Pair               <  String ':' Value
+  Array              <  '[' (Value (',' Value)* )? ']'
+  Value              <  String
+                        / Number
+                        / Dict
+                        / Array
+                        / True
+                        / False
+                        / Null
+  True               <- "true"
+  False              <- "false"
+  Null               <- "null"

@@ -17,20 +17,19 @@ void main(string[] args)
     auto tmpl = `Hello {{ name1|default("\"ABCD\"") }}!`;
     JSONValue data;
     data["name"] = "World";
-    Jinja view;
+    auto view = new Jinja;
     writeln(view.render(tmpl, data));
 
-//     enum data1 = preparedData;
-//     enum funcTmpl = `
-// void {{ name }}()
-// {
-//     writeln("{{ value }}");
-// }
-// `;
-//     enum staticView = Jinja();
-//     mixin(staticView.render(funcTmpl, data1));
-//     // Call the function that is defined in the previous line
-//     hello;
+    enum data1 = preparedData;
+    enum funcTmpl = `
+void {{ name }}()
+{
+    writeln("{{ value }}");
+}
+`;
+    mixin(Jinja.renderString(funcTmpl, data1));
+    // Call the function that is defined in the previous line
+    hello;
 
     if (args.length == 3)
     {

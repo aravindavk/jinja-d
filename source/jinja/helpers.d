@@ -122,14 +122,29 @@ struct JinjaData
     }
 }
 
-string interpolationParser(JinjaSettings settings, ParseTree parsedTmpl, ref JinjaData data)
+// TODO: Check the previous expression value and the operator to find the new value
+JSONValue applyOperator(string operator, JSONValue value1, JSONValue value2)
+{
+    switch(operator)
+    {
+    case "==":
+        return JSONValue(value1 == value2);
+    default:
+        return value2;
+    }
+}
+
+JSONValue expressionParser(JinjaSettings settings, ParseTree parsedTmpl, ref JinjaData data, JSONValue prevExpressionValue = JSONValue())
 {
     string expression;
+    string operator;
     JinjaFilter[] filters;
 
     foreach(child; parsedTmpl.children)
     {
-        if (child.name == "JinjaTemplate.Expression")
+        if (child.name == "JinjaTemplate.ExpressionOperator")
+            operator = child.matches[0];
+        else if (child.name == "JinjaTemplate.ExpressionPart")
             expression = child.matches[0];
         else if (child.name == "JinjaTemplate.Filter")
         {
@@ -150,10 +165,36 @@ string interpolationParser(JinjaSettings settings, ParseTree parsedTmpl, ref Jin
             filters ~= f;
         }
     }
+
     auto expressionValue = data.get(expression);
     foreach(filter; filters)
     {
+        // TODO: Handle filter exists and call error
         expressionValue = _registeredFilters[filter.name](expressionValue, filter.args);
+    }
+
+    return applyOperator(operator, prevExpressionValue, expressionValue);
+}
+
+string interpolationParser(JinjaSettings settings, ParseTree parsedTmpl, ref JinjaData data)
+{
+    JSONValue expressionValue;
+    string fullExpression;
+    JinjaFilter[] filters;
+
+    foreach(child; parsedTmpl.children)
+    {
+        if (child.name == "JinjaTemplate.Expression")
+        {
+            fullExpression = child.matches.join;
+            foreach(expChild; child.children)
+            {
+                if (expChild.name == "JinjaTemplate.ExpressionLhs")
+                    expressionValue = expressionParser(settings, expChild, data);
+                else if (expChild.name == "JinjaTemplate.ExpressionRhs")
+                    expressionValue = expressionParser(settings, expChild, data, expressionValue);
+            }
+        }
     }
 
     if (expressionValue.isNull)
@@ -163,7 +204,7 @@ string interpolationParser(JinjaSettings settings, ParseTree parsedTmpl, ref Jin
         else if (settings.onMissingKey == MissingKey.passThrough)
             return parsedTmpl.matches.join;
         else
-            throw new JinjaException(expression ~ " not found in the data");
+            throw new JinjaException(fullExpression ~ " not found in the data");
     }
     return expressionValue.str;
 }
@@ -171,7 +212,7 @@ string interpolationParser(JinjaSettings settings, ParseTree parsedTmpl, ref Jin
 string setStatementParser(JinjaSettings settings, ParseTree parsedTmpl, ref JinjaData data)
 {
     string variable;
-    string expression;
+    JSONValue expressionValue;
     JinjaFilter[] filters;
 
     foreach(child; parsedTmpl.children)
@@ -179,34 +220,92 @@ string setStatementParser(JinjaSettings settings, ParseTree parsedTmpl, ref Jinj
         if (child.name == "JinjaTemplate.Variable")
             variable = child.matches[0];
         else if (child.name == "JinjaTemplate.Expression")
-            expression = child.matches[0];
-        else if (child.name == "JinjaTemplate.Filter")
-        {
-            JinjaFilter f;
-            foreach(filterChild; child.children)
+            foreach(expChild; child.children)
             {
-                if (filterChild.name == "JinjaTemplate.FilterName")
-                    f.name = filterChild.matches[0];
-                else if (filterChild.name == "JinjaTemplate.FilterArgs")
-                {
-                    foreach(argChild; filterChild.children)
-                    {
-                        if (argChild.name == "JinjaTemplate.FilterArg")
-                            f.args ~= argChild.matches.join;
-                    }
-                }
+                if (expChild.name == "JinjaTemplate.ExpressionLhs")
+                    expressionValue = expressionParser(settings, expChild, data);
             }
-            filters ~= f;
-        }
-    }
-
-    auto expressionValue = data.get(expression);
-    foreach(filter; filters)
-    {
-        expressionValue = _registeredFilters[filter.name](expressionValue, filter.args);
     }
 
     data.set(variable, expressionValue);
+    return "";
+}
+
+bool ifStatementParser(JinjaSettings settings, ParseTree parsedTmpl, ref JinjaData data)
+{
+    JSONValue expressionValue;
+    foreach(ifChild; parsedTmpl.children)
+    {
+        if (ifChild.name == "JinjaTemplate.IfExpression")
+        {
+            foreach(expChild; ifChild.children)
+            {
+                if (expChild.name == "JinjaTemplate.Expression")
+                {
+                    foreach(exp; expChild.children)
+                    {
+                        if (exp.name == "JinjaTemplate.ExpressionLhs")
+                            expressionValue = expressionParser(settings, exp, data);
+                        else if (exp.name == "JinjaTemplate.ExpressionRhs")
+                            expressionValue = expressionParser(settings, exp, data, expressionValue);
+                    }   
+                }
+            }
+        }
+    }
+
+    if (!expressionValue.isNull && expressionValue == JSONValue(true))
+        return true;
+
+    return false;
+}
+
+string elseStatementParser(JinjaSettings settings, ParseTree parsedTmpl, ref JinjaData data)
+{
+    foreach(elseChild; parsedTmpl.children)
+    {
+        if (elseChild.name == "JinjaTemplate.Template")
+        {
+            return parse(settings, elseChild, data);
+        }
+    }
+    return "";
+}
+
+string ifElseStatementParser(JinjaSettings settings, ParseTree parsedTmpl, ref JinjaData data)
+{
+    auto conditionOk = false;
+
+    foreach(child; parsedTmpl.children)
+    {
+        if (child.name == "JinjaTemplate.OpenIf")
+        {
+            conditionOk = ifStatementParser(settings, child, data);
+        }
+        else if (child.name == "JinjaTemplate.Template")
+        {
+            if (conditionOk)
+                return parse(settings, child, data);
+        }
+        else if (child.name == "JinjaTemplate.ElifStatement" && !conditionOk)
+        {
+            foreach(elifChild; child.children)
+            {
+                if (elifChild.name == "JinjaTemplate.OpenElif")
+                    conditionOk = ifStatementParser(settings, elifChild, data);
+                else if (elifChild.name == "JinjaTemplate.Template")
+                {
+                    if (conditionOk)
+                        return parse(settings, elifChild, data);
+                }
+            }
+        }
+        else if (child.name == "JinjaTemplate.ElseStatement" && !conditionOk)
+        {
+            return elseStatementParser(settings, child, data);
+        }
+    }
+
     return "";
 }
 
@@ -236,9 +335,9 @@ string parse(JinjaSettings settings, ParseTree parsedTmpl, ref JinjaData data)
         return interpolationParser(settings, parsedTmpl, data);
     case "JinjaTemplate.SetStatement":
         return setStatementParser(settings, parsedTmpl, data);
+    case "JinjaTemplate.IfStatement":
+        return ifElseStatementParser(settings, parsedTmpl, data);
     default:
         return "";
     }
 }
-
-

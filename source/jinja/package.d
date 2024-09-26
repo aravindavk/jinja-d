@@ -107,4 +107,23 @@ After Raw.
     auto expect6 = "Hello Aaa!";
     JSONValue data6;
     assert(view.render(tmpl6, data6) == expect6, view.render(tmpl6, data6));
+
+    auto tmpl7 = `{% if name == "AAA" %}It is AAA{% elif name == "BBB" %}It is BBB{% else %}{% if check %}Nested AA{% else %}Nested Else{% endif %}{% endif %}`;
+    auto expect7If = `It is AAA`;
+    auto expect7Elif = `It is BBB`;
+    auto expect7ElseIf = `Nested AA`;
+    auto expect7ElseElse = `Nested Else`;
+    JSONValue data7;
+    data7["name"] = "AAA";
+    assert(view.render(tmpl7, data7) == expect7If, view.render(tmpl7, data7));
+
+    data7["name"] = "BBB";
+    assert(view.render(tmpl7, data7) == expect7Elif, view.render(tmpl7, data7));
+
+    data7["name"] = "CCC";
+    data7["check"] = true;
+    assert(view.render(tmpl7, data7) == expect7ElseIf, view.render(tmpl7, data7));
+
+    data7["check"] = false;
+    assert(view.render(tmpl7, data7) == expect7ElseElse, view.render(tmpl7, data7));
 }

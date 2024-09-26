@@ -1,9 +1,9 @@
 JinjaTemplate:
-  Template           <- (Text / Comment / RawStatement / Interpolation / SetStatement)+
+  Template           <- (Text / Comment / RawStatement / Interpolation / SetStatement / IfStatement)+
   Text               <- ~(!(OpenInterpolation / OpenStatement / OpenComment) .)+
   Comment            <- OpenComment (!CloseComment .)+ CloseComment
   RawStatement       <- OpenRaw RawText CloseRaw
-  SetStatement       <  OpenStatement "set" Variable "=" Expression Filter* CloseStatement
+  SetStatement       <  OpenStatement "set" Variable "=" Expression CloseStatement
   Variable           <  qualifiedIdentifier
   RawText            <~ blank* (!CloseRaw .)+ blank*
   OpenRaw            <  OpenStatement "raw" CloseStatement
@@ -17,7 +17,27 @@ JinjaTemplate:
   OpenParen          <- "("
   CloseParen         <- ")"
   Interpolation      <  OpenInterpolation Expression Filter* CloseInterpolation
-  Expression         <~ qualifiedIdentifier / Value
+  IfStatement        <  OpenIf JinjaTemplate ElifStatement* ElseStatement* CloseIf
+  ElifStatement      <  OpenElif (!OpenElif !OpenElse !CloseIf JinjaTemplate)
+  ElseStatement      <  OpenElse (!CloseIf JinjaTemplate)
+  OpenElif           <  OpenStatement "elif" IfExpression CloseStatement
+  OpenElse           <  OpenStatement "else" CloseStatement
+  OpenIf             <  OpenStatement "if" IfExpression CloseStatement
+  CloseIf            <  OpenStatement "endif" CloseStatement
+  IfExpression       <  Expression Filter*
+  CompareOperator    <  "==" / ">=" / "<=" / ">" / "<" / "!="
+  MathOperator       <  "+" / "-" / "/" / "//" / "%" / "*" / "**"
+  LogicOperator      <  "and" / "or" / NotOperator
+  ConcatOperator     <  "~"
+  InOperator         <  "in"
+  IsOperator         <  "is"
+  NotOperator        <  "not"
+  IsStatement        <  IsOperator Filter
+  ExpressionOperator <  MathOperator / LogicOperator / CompareOperator / ConcatOperator
+  Expression         <  ExpressionLhs (ExpressionRhs / IsStatement)*
+  ExpressionLhs      <  NotOperator* ExpressionPart Filter*
+  ExpressionRhs      <  (!CloseStatement ExpressionOperator) ExpressionPart Filter*
+  ExpressionPart     <  Value / qualifiedIdentifier / identifier "[" String "]"
   Number             <  ~(Digit+)
   Digit              <  [0-9]
   Filter             <  FilterStart FilterName FilterArgs*

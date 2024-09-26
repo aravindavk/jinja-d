@@ -1,5 +1,7 @@
 module jinja.helpers;
 
+debug {import std.stdio;}
+
 import std.json;
 import std.string;
 
@@ -66,6 +68,10 @@ struct JinjaData
 
     JSONValue get(string name, JSONValue scopeData = JSONValue())
     {
+        auto nameValue = sanitizeValue(name, true);
+        if (!nameValue.isNull)
+            return nameValue;
+
         JSONValue _data = data.deepCopy;
 
         // When extra data is passed that takes the precedence
@@ -96,9 +102,14 @@ struct JinjaData
             if (name in _data)
                 return _data[name];
         }
-
+ 
         // Null value
         return JSONValue();
+    }
+
+    void set(string key, JSONValue value)
+    {
+        data[key] = value;
     }
 
     JinjaData updated(JSONValue extraData)
@@ -111,7 +122,7 @@ struct JinjaData
     }
 }
 
-string interpolationParser(JinjaSettings settings, ParseTree parsedTmpl, JinjaData data)
+string interpolationParser(JinjaSettings settings, ParseTree parsedTmpl, ref JinjaData data)
 {
     string expression;
     JinjaFilter[] filters;
@@ -157,9 +168,50 @@ string interpolationParser(JinjaSettings settings, ParseTree parsedTmpl, JinjaDa
     return expressionValue.str;
 }
 
-string parse(JinjaSettings settings, ParseTree parsedTmpl, JinjaData data)
+string setStatementParser(JinjaSettings settings, ParseTree parsedTmpl, ref JinjaData data)
 {
-    import std.stdio;
+    string variable;
+    string expression;
+    JinjaFilter[] filters;
+
+    foreach(child; parsedTmpl.children)
+    {
+        if (child.name == "JinjaTemplate.Variable")
+            variable = child.matches[0];
+        else if (child.name == "JinjaTemplate.Expression")
+            expression = child.matches[0];
+        else if (child.name == "JinjaTemplate.Filter")
+        {
+            JinjaFilter f;
+            foreach(filterChild; child.children)
+            {
+                if (filterChild.name == "JinjaTemplate.FilterName")
+                    f.name = filterChild.matches[0];
+                else if (filterChild.name == "JinjaTemplate.FilterArgs")
+                {
+                    foreach(argChild; filterChild.children)
+                    {
+                        if (argChild.name == "JinjaTemplate.FilterArg")
+                            f.args ~= argChild.matches.join;
+                    }
+                }
+            }
+            filters ~= f;
+        }
+    }
+
+    auto expressionValue = data.get(expression);
+    foreach(filter; filters)
+    {
+        expressionValue = _registeredFilters[filter.name](expressionValue, filter.args);
+    }
+
+    data.set(variable, expressionValue);
+    return "";
+}
+
+string parse(JinjaSettings settings, ParseTree parsedTmpl, ref JinjaData data)
+{
     switch(parsedTmpl.name)
     {
     case "JinjaTemplate":
@@ -182,6 +234,8 @@ string parse(JinjaSettings settings, ParseTree parsedTmpl, JinjaData data)
         return "";
     case "JinjaTemplate.Interpolation":
         return interpolationParser(settings, parsedTmpl, data);
+    case "JinjaTemplate.SetStatement":
+        return setStatementParser(settings, parsedTmpl, data);
     default:
         return "";
     }

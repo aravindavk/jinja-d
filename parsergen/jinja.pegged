@@ -1,8 +1,10 @@
 JinjaTemplate:
-  Template           <- (Text / Comment / RawStatement / Interpolation)+
+  Template           <- (Text / Comment / RawStatement / Interpolation / SetStatement)+
   Text               <- ~(!(OpenInterpolation / OpenStatement / OpenComment) .)+
   Comment            <- OpenComment (!CloseComment .)+ CloseComment
   RawStatement       <- OpenRaw RawText CloseRaw
+  SetStatement       <  OpenStatement "set" Variable "=" Expression Filter* CloseStatement
+  Variable           <  qualifiedIdentifier
   RawText            <~ blank* (!CloseRaw .)+ blank*
   OpenRaw            <  OpenStatement "raw" CloseStatement
   CloseRaw           <  OpenStatement "endraw" CloseStatement
@@ -15,7 +17,7 @@ JinjaTemplate:
   OpenParen          <- "("
   CloseParen         <- ")"
   Interpolation      <  OpenInterpolation Expression Filter* CloseInterpolation
-  Expression         <~ (!FilterStart !CloseInterpolation !blank .)+
+  Expression         <~ qualifiedIdentifier / Value
   Number             <  ~(Digit+)
   Digit              <  [0-9]
   Filter             <  FilterStart FilterName FilterArgs*

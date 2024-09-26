@@ -26,7 +26,9 @@ class Jinja
             import std.stdio;
             writeln(parsedTmpl);
         }
-        return parse(settings, parsedTmpl, JinjaData(data));
+        JinjaData jd;
+        jd.data = data;
+        return parse(settings, parsedTmpl, jd);
     }
 
     string renderFile(string fileName, JSONValue data = JSONValue())
@@ -44,7 +46,9 @@ class Jinja
     {
         auto parsedTmpl = JinjaTemplate(tmpl);
         JinjaSettings settings_;
-        return parse(settings_, parsedTmpl, JinjaData(data));
+        JinjaData jd;
+        jd.data = data;
+        return parse(settings_, parsedTmpl, jd);
     }
 }
 
@@ -98,4 +102,9 @@ After Raw.
     auto expect4 = `Hello ABCD!`;
     JSONValue data4;
     assert(view.render(tmpl4, data4) == expect4, view.render(tmpl4, data4));
+
+    auto tmpl6 = `{% set name = "AAA"|capitalize %}Hello {{ name }}!`;
+    auto expect6 = "Hello Aaa!";
+    JSONValue data6;
+    assert(view.render(tmpl6, data6) == expect6, view.render(tmpl6, data6));
 }

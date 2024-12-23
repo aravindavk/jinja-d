@@ -2,7 +2,7 @@
 This module was automatically generated from the following grammar:
 
 JinjaTemplate:
-  Template           <- (Text / Comment / RawStatement / Interpolation / SetStatement / IfStatement)+
+  Template           <- (Text / Comment / RawStatement / Interpolation / SetStatement / IfStatement / ForStatement)+
   Text               <- ~(!(OpenInterpolation / OpenStatement / OpenComment) .)+
   Comment            <- OpenComment (!CloseComment .)+ CloseComment
   RawStatement       <- OpenRaw RawText CloseRaw
@@ -20,6 +20,9 @@ JinjaTemplate:
   OpenParen          <- "("
   CloseParen         <- ")"
   Interpolation      <  OpenInterpolation Expression Filter* CloseInterpolation
+  ForStatement       <  OpenFor JinjaTemplate CloseFor
+  OpenFor            <  OpenStatement "for" Variable InOperator Expression CloseStatement
+  CloseFor           <  OpenStatement "endfor" CloseStatement
   IfStatement        <  OpenIf JinjaTemplate ElifStatement* ElseStatement* CloseIf
   ElifStatement      <  OpenElif (!OpenElif !OpenElse !CloseIf JinjaTemplate)
   ElseStatement      <  OpenElse (!CloseIf JinjaTemplate)
@@ -107,6 +110,9 @@ import std.functional: toDelegate;
         rules["OpenParen"] = toDelegate(&OpenParen);
         rules["CloseParen"] = toDelegate(&CloseParen);
         rules["Interpolation"] = toDelegate(&Interpolation);
+        rules["ForStatement"] = toDelegate(&ForStatement);
+        rules["OpenFor"] = toDelegate(&OpenFor);
+        rules["CloseFor"] = toDelegate(&CloseFor);
         rules["IfStatement"] = toDelegate(&IfStatement);
         rules["ElifStatement"] = toDelegate(&ElifStatement);
         rules["ElseStatement"] = toDelegate(&ElseStatement);
@@ -208,7 +214,7 @@ import std.functional: toDelegate;
     {
         if(__ctfe)
         {
-            return         pegged.peg.defined!(pegged.peg.oneOrMore!(pegged.peg.or!(Text, Comment, RawStatement, Interpolation, SetStatement, IfStatement)), "JinjaTemplate.Template")(p);
+            return         pegged.peg.defined!(pegged.peg.oneOrMore!(pegged.peg.or!(Text, Comment, RawStatement, Interpolation, SetStatement, IfStatement, ForStatement)), "JinjaTemplate.Template")(p);
         }
         else
         {
@@ -216,7 +222,7 @@ import std.functional: toDelegate;
                 return *m;
             else
             {
-                TParseTree result = hooked!(pegged.peg.defined!(pegged.peg.oneOrMore!(pegged.peg.or!(Text, Comment, RawStatement, Interpolation, SetStatement, IfStatement)), "JinjaTemplate.Template"), "Template")(p);
+                TParseTree result = hooked!(pegged.peg.defined!(pegged.peg.oneOrMore!(pegged.peg.or!(Text, Comment, RawStatement, Interpolation, SetStatement, IfStatement, ForStatement)), "JinjaTemplate.Template"), "Template")(p);
                 memo[tuple(`Template`, p.end)] = result;
                 return result;
             }
@@ -227,12 +233,12 @@ import std.functional: toDelegate;
     {
         if(__ctfe)
         {
-            return         pegged.peg.defined!(pegged.peg.oneOrMore!(pegged.peg.or!(Text, Comment, RawStatement, Interpolation, SetStatement, IfStatement)), "JinjaTemplate.Template")(TParseTree("", false,[], s));
+            return         pegged.peg.defined!(pegged.peg.oneOrMore!(pegged.peg.or!(Text, Comment, RawStatement, Interpolation, SetStatement, IfStatement, ForStatement)), "JinjaTemplate.Template")(TParseTree("", false,[], s));
         }
         else
         {
             forgetMemo();
-            return hooked!(pegged.peg.defined!(pegged.peg.oneOrMore!(pegged.peg.or!(Text, Comment, RawStatement, Interpolation, SetStatement, IfStatement)), "JinjaTemplate.Template"), "Template")(TParseTree("", false,[], s));
+            return hooked!(pegged.peg.defined!(pegged.peg.oneOrMore!(pegged.peg.or!(Text, Comment, RawStatement, Interpolation, SetStatement, IfStatement, ForStatement)), "JinjaTemplate.Template"), "Template")(TParseTree("", false,[], s));
         }
     }
     static string Template(GetName g)
@@ -850,6 +856,114 @@ import std.functional: toDelegate;
     static string Interpolation(GetName g)
     {
         return "JinjaTemplate.Interpolation";
+    }
+
+    static TParseTree ForStatement(TParseTree p)
+    {
+        if(__ctfe)
+        {
+            return         pegged.peg.defined!(pegged.peg.and!(pegged.peg.wrapAround!(Spacing, OpenFor, Spacing), pegged.peg.wrapAround!(Spacing, JinjaTemplate, Spacing), pegged.peg.wrapAround!(Spacing, CloseFor, Spacing)), "JinjaTemplate.ForStatement")(p);
+        }
+        else
+        {
+            if (auto m = tuple(`ForStatement`, p.end) in memo)
+                return *m;
+            else
+            {
+                TParseTree result = hooked!(pegged.peg.defined!(pegged.peg.and!(pegged.peg.wrapAround!(Spacing, OpenFor, Spacing), pegged.peg.wrapAround!(Spacing, JinjaTemplate, Spacing), pegged.peg.wrapAround!(Spacing, CloseFor, Spacing)), "JinjaTemplate.ForStatement"), "ForStatement")(p);
+                memo[tuple(`ForStatement`, p.end)] = result;
+                return result;
+            }
+        }
+    }
+
+    static TParseTree ForStatement(string s)
+    {
+        if(__ctfe)
+        {
+            return         pegged.peg.defined!(pegged.peg.and!(pegged.peg.wrapAround!(Spacing, OpenFor, Spacing), pegged.peg.wrapAround!(Spacing, JinjaTemplate, Spacing), pegged.peg.wrapAround!(Spacing, CloseFor, Spacing)), "JinjaTemplate.ForStatement")(TParseTree("", false,[], s));
+        }
+        else
+        {
+            forgetMemo();
+            return hooked!(pegged.peg.defined!(pegged.peg.and!(pegged.peg.wrapAround!(Spacing, OpenFor, Spacing), pegged.peg.wrapAround!(Spacing, JinjaTemplate, Spacing), pegged.peg.wrapAround!(Spacing, CloseFor, Spacing)), "JinjaTemplate.ForStatement"), "ForStatement")(TParseTree("", false,[], s));
+        }
+    }
+    static string ForStatement(GetName g)
+    {
+        return "JinjaTemplate.ForStatement";
+    }
+
+    static TParseTree OpenFor(TParseTree p)
+    {
+        if(__ctfe)
+        {
+            return         pegged.peg.defined!(pegged.peg.and!(pegged.peg.wrapAround!(Spacing, OpenStatement, Spacing), pegged.peg.wrapAround!(Spacing, pegged.peg.literal!("for"), Spacing), pegged.peg.wrapAround!(Spacing, Variable, Spacing), pegged.peg.wrapAround!(Spacing, InOperator, Spacing), pegged.peg.wrapAround!(Spacing, Expression, Spacing), pegged.peg.wrapAround!(Spacing, CloseStatement, Spacing)), "JinjaTemplate.OpenFor")(p);
+        }
+        else
+        {
+            if (auto m = tuple(`OpenFor`, p.end) in memo)
+                return *m;
+            else
+            {
+                TParseTree result = hooked!(pegged.peg.defined!(pegged.peg.and!(pegged.peg.wrapAround!(Spacing, OpenStatement, Spacing), pegged.peg.wrapAround!(Spacing, pegged.peg.literal!("for"), Spacing), pegged.peg.wrapAround!(Spacing, Variable, Spacing), pegged.peg.wrapAround!(Spacing, InOperator, Spacing), pegged.peg.wrapAround!(Spacing, Expression, Spacing), pegged.peg.wrapAround!(Spacing, CloseStatement, Spacing)), "JinjaTemplate.OpenFor"), "OpenFor")(p);
+                memo[tuple(`OpenFor`, p.end)] = result;
+                return result;
+            }
+        }
+    }
+
+    static TParseTree OpenFor(string s)
+    {
+        if(__ctfe)
+        {
+            return         pegged.peg.defined!(pegged.peg.and!(pegged.peg.wrapAround!(Spacing, OpenStatement, Spacing), pegged.peg.wrapAround!(Spacing, pegged.peg.literal!("for"), Spacing), pegged.peg.wrapAround!(Spacing, Variable, Spacing), pegged.peg.wrapAround!(Spacing, InOperator, Spacing), pegged.peg.wrapAround!(Spacing, Expression, Spacing), pegged.peg.wrapAround!(Spacing, CloseStatement, Spacing)), "JinjaTemplate.OpenFor")(TParseTree("", false,[], s));
+        }
+        else
+        {
+            forgetMemo();
+            return hooked!(pegged.peg.defined!(pegged.peg.and!(pegged.peg.wrapAround!(Spacing, OpenStatement, Spacing), pegged.peg.wrapAround!(Spacing, pegged.peg.literal!("for"), Spacing), pegged.peg.wrapAround!(Spacing, Variable, Spacing), pegged.peg.wrapAround!(Spacing, InOperator, Spacing), pegged.peg.wrapAround!(Spacing, Expression, Spacing), pegged.peg.wrapAround!(Spacing, CloseStatement, Spacing)), "JinjaTemplate.OpenFor"), "OpenFor")(TParseTree("", false,[], s));
+        }
+    }
+    static string OpenFor(GetName g)
+    {
+        return "JinjaTemplate.OpenFor";
+    }
+
+    static TParseTree CloseFor(TParseTree p)
+    {
+        if(__ctfe)
+        {
+            return         pegged.peg.defined!(pegged.peg.and!(pegged.peg.wrapAround!(Spacing, OpenStatement, Spacing), pegged.peg.wrapAround!(Spacing, pegged.peg.literal!("endfor"), Spacing), pegged.peg.wrapAround!(Spacing, CloseStatement, Spacing)), "JinjaTemplate.CloseFor")(p);
+        }
+        else
+        {
+            if (auto m = tuple(`CloseFor`, p.end) in memo)
+                return *m;
+            else
+            {
+                TParseTree result = hooked!(pegged.peg.defined!(pegged.peg.and!(pegged.peg.wrapAround!(Spacing, OpenStatement, Spacing), pegged.peg.wrapAround!(Spacing, pegged.peg.literal!("endfor"), Spacing), pegged.peg.wrapAround!(Spacing, CloseStatement, Spacing)), "JinjaTemplate.CloseFor"), "CloseFor")(p);
+                memo[tuple(`CloseFor`, p.end)] = result;
+                return result;
+            }
+        }
+    }
+
+    static TParseTree CloseFor(string s)
+    {
+        if(__ctfe)
+        {
+            return         pegged.peg.defined!(pegged.peg.and!(pegged.peg.wrapAround!(Spacing, OpenStatement, Spacing), pegged.peg.wrapAround!(Spacing, pegged.peg.literal!("endfor"), Spacing), pegged.peg.wrapAround!(Spacing, CloseStatement, Spacing)), "JinjaTemplate.CloseFor")(TParseTree("", false,[], s));
+        }
+        else
+        {
+            forgetMemo();
+            return hooked!(pegged.peg.defined!(pegged.peg.and!(pegged.peg.wrapAround!(Spacing, OpenStatement, Spacing), pegged.peg.wrapAround!(Spacing, pegged.peg.literal!("endfor"), Spacing), pegged.peg.wrapAround!(Spacing, CloseStatement, Spacing)), "JinjaTemplate.CloseFor"), "CloseFor")(TParseTree("", false,[], s));
+        }
+    }
+    static string CloseFor(GetName g)
+    {
+        return "JinjaTemplate.CloseFor";
     }
 
     static TParseTree IfStatement(TParseTree p)

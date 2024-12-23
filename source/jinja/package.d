@@ -9,14 +9,9 @@ import jinja.helpers;
 import jinja.filters;
 import jinja.parser;
 
-class Jinja
+struct Jinja
 {
     JinjaSettings settings;
-
-    this(JinjaSettings settings = JinjaSettings.init)
-    {
-        this.settings = settings;
-    }
     
     string render(string tmpl, JSONValue data = JSONValue())
     {
@@ -55,7 +50,7 @@ class Jinja
 unittest
 {
     
-    auto view = new Jinja;
+    Jinja view;
     assert(view.render("Hello World!") == "Hello World!", view.render("Hello World!"));
     assert(view.render("Hello World!{# This is comment #}") == "Hello World!");
     auto tmpl1 = `Hello World!
@@ -126,4 +121,10 @@ After Raw.
 
     data7["check"] = false;
     assert(view.render(tmpl7, data7) == expect7ElseElse, view.render(tmpl7, data7));
+
+    auto tmpl8 = `{% for name in names %}Hello {{ name|upper }}{% endfor %}`;
+    auto expect8 = "Hello AHello BHello C";
+    JSONValue data8;
+    data8["names"] = JSONValue(["a", "b", "c"]);
+    assert(view.render(tmpl8, data8) == expect8, view.render(tmpl8, data8));
 }

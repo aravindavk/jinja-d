@@ -17,7 +17,7 @@ void main(string[] args)
     auto tmpl = `Hello {{ name1|default("\"ABCD\"") }}!`;
     JSONValue data;
     data["name"] = "World";
-    auto view = new Jinja;
+    Jinja view;
     writeln(view.render(tmpl, data));
 
     enum data1 = preparedData;

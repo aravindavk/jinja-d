@@ -21,6 +21,11 @@ JSONValue filterCapitalize(JSONValue value, string[] args)
     return JSONValue(value.str.capitalize);
 }
 
+JSONValue filterUppercase(JSONValue value, string[] args)
+{
+    return JSONValue(value.str.toUpper);
+}
+
 JSONValue filterDefault(JSONValue value, string[] args)
 {
     if (value.isNull)
@@ -33,5 +38,6 @@ alias FilterFunction = JSONValue function(JSONValue, string[]);
 
 FilterFunction[string] _registeredFilters = [
     "capitalize": &filterCapitalize,
+    "upper": &filterUppercase,
     "default": &filterDefault
 ];

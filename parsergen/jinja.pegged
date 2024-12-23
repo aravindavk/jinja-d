@@ -1,5 +1,5 @@
 JinjaTemplate:
-  Template           <- (Text / Comment / RawStatement / Interpolation / SetStatement / IfStatement)+
+  Template           <- (Text / Comment / RawStatement / Interpolation / SetStatement / IfStatement / ForStatement)+
   Text               <- ~(!(OpenInterpolation / OpenStatement / OpenComment) .)+
   Comment            <- OpenComment (!CloseComment .)+ CloseComment
   RawStatement       <- OpenRaw RawText CloseRaw
@@ -17,6 +17,9 @@ JinjaTemplate:
   OpenParen          <- "("
   CloseParen         <- ")"
   Interpolation      <  OpenInterpolation Expression Filter* CloseInterpolation
+  ForStatement       <  OpenFor JinjaTemplate CloseFor
+  OpenFor            <  OpenStatement "for" Variable InOperator Expression CloseStatement
+  CloseFor           <  OpenStatement "endfor" CloseStatement
   IfStatement        <  OpenIf JinjaTemplate ElifStatement* ElseStatement* CloseIf
   ElifStatement      <  OpenElif (!OpenElif !OpenElse !CloseIf JinjaTemplate)
   ElseStatement      <  OpenElse (!CloseIf JinjaTemplate)

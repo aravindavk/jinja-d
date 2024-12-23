@@ -50,14 +50,13 @@ JSONValue deepCopy(ref JSONValue val)
         }
         break;
     case JSONType.array:
+        newVal = JSONValue.emptyArray;
         foreach (size_t index, value; val)
-        {
-            newVal[index] = value.deepCopy;
-        }
+            newVal.array ~= value.deepCopy;
+
         break;
     default:
         newVal = val;
-
     }
     return newVal;
 }
@@ -220,11 +219,13 @@ string setStatementParser(JinjaSettings settings, ParseTree parsedTmpl, ref Jinj
         if (child.name == "JinjaTemplate.Variable")
             variable = child.matches[0];
         else if (child.name == "JinjaTemplate.Expression")
+        {
             foreach(expChild; child.children)
             {
                 if (expChild.name == "JinjaTemplate.ExpressionLhs")
                     expressionValue = expressionParser(settings, expChild, data);
             }
+        }
     }
 
     data.set(variable, expressionValue);
@@ -309,6 +310,44 @@ string ifElseStatementParser(JinjaSettings settings, ParseTree parsedTmpl, ref J
     return "";
 }
 
+string forStatementParser(JinjaSettings settings, ParseTree parsedTmpl, ref JinjaData data)
+{
+    JSONValue expressionValue;
+    string variableName;
+    string output;
+
+    foreach(child; parsedTmpl.children)
+    {
+        if (child.name == "JinjaTemplate.OpenFor")
+        {
+            foreach(ofChild; child)
+            {
+                if (ofChild.name == "JinjaTemplate.Variable")
+                    variableName = ofChild.matches[0];
+                else if (ofChild.name == "JinjaTemplate.Expression")
+                    foreach(expChild; ofChild.children)
+                    {
+                        if (expChild.name == "JinjaTemplate.ExpressionLhs")
+                            expressionValue = expressionParser(settings, expChild, data);
+                    }
+            }
+        }
+        else if (child.name == "JinjaTemplate.Template")
+        {
+            // TODO: Handle if expressionValue is not an array
+            foreach(loopData; expressionValue.array)
+            {
+                JSONValue d;
+                d[variableName] = loopData;
+                auto newData = data.updated(d);
+                output ~= parse(settings, child, newData);
+            }
+        }
+    }
+
+    return output;
+}
+
 string parse(JinjaSettings settings, ParseTree parsedTmpl, ref JinjaData data)
 {
     switch(parsedTmpl.name)
@@ -337,6 +376,8 @@ string parse(JinjaSettings settings, ParseTree parsedTmpl, ref JinjaData data)
         return setStatementParser(settings, parsedTmpl, data);
     case "JinjaTemplate.IfStatement":
         return ifElseStatementParser(settings, parsedTmpl, data);
+    case "JinjaTemplate.ForStatement":
+        return forStatementParser(settings, parsedTmpl, data);
     default:
         return "";
     }

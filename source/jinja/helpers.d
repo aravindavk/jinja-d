@@ -9,6 +9,8 @@ import pegged.grammar;
 
 import jinja.filters;
 
+enum defaultViewsDir = "./views";
+
 enum MissingKey
 {
     empty,
@@ -16,16 +18,16 @@ enum MissingKey
     error
 }
 
+struct JinjaSettings
+{
+    string viewsDirectory = defaultViewsDir;
+    MissingKey onMissingKey;
+}
+
 struct JinjaFilter
 {
     string name;
     string[] args;
-}
-
-struct JinjaSettings
-{
-    string viewsDirectory = "views";
-    MissingKey onMissingKey = MissingKey.empty;
 }
 
 class JinjaException : Exception
@@ -201,11 +203,18 @@ string interpolationParser(JinjaSettings settings, ParseTree parsedTmpl, ref Jin
         if (settings.onMissingKey == MissingKey.empty)
             return "";
         else if (settings.onMissingKey == MissingKey.passThrough)
-            return parsedTmpl.matches.join;
+            return parsedTmpl.matches.join(" ");
         else
             throw new JinjaException(fullExpression ~ " not found in the data");
     }
-    return expressionValue.str;
+
+    if (expressionValue.type == JSONType.string)
+        return expressionValue.str;
+    else
+    {
+        import std.conv;
+        return expressionValue.to!string;
+    }
 }
 
 string setStatementParser(JinjaSettings settings, ParseTree parsedTmpl, ref JinjaData data)

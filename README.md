@@ -246,7 +246,7 @@ void simple(Request request, Output output)
 {
     auto title = "Jinja";
     auto subtitle = "Simple Text Template system";
-    output ~= renderFile!(title, subtitle)("index.html");
+    output ~= view.renderFile!(title, subtitle)("index.html");
 }
 ```
 

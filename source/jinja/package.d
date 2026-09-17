@@ -63,10 +63,11 @@ string renderString(Args...)(ref Jinja view, string tmpl, JSONValue data = JSONV
     return render!(Args)(view, tmpl, data);
 }
 
-Jinja templateFromString(string input, MissingKey onMissingKey = MissingKey.init)
+Jinja templateFromString(string input, MissingKey onMissingKey = MissingKey.init, string viewsDirectory = defaultViewsDir)
 {
     Jinja view;
     view.settings.onMissingKey = onMissingKey;
+    view.settings.viewsDirectory = viewsDirectory;
     view.tmpl_ = input;
     return view;
 }
@@ -75,15 +76,16 @@ Jinja templateFromFile(string path, MissingKey onMissingKey = MissingKey.init, s
 {
     Jinja view;
     view.settings.onMissingKey = onMissingKey;
-    view.settings.viewsDirectory = viewsDirectory; 
+    view.settings.viewsDirectory = viewsDirectory;
     view.tmpl_ = readText(buildPath(view.settings.viewsDirectory, path));
     return view;
 }
 
-string renderString(string input, JSONValue data = JSONValue(), MissingKey onMissingKey = MissingKey.init)
+string renderString(string input, JSONValue data = JSONValue(), MissingKey onMissingKey = MissingKey.init, string viewsDirectory = defaultViewsDir)
 {
     Jinja tmpl;
     tmpl.settings.onMissingKey = onMissingKey;
+    tmpl.settings.viewsDirectory = viewsDirectory;
     return tmpl.renderString(input, data);
 }
 
@@ -104,9 +106,9 @@ JSONValue dataFromArgs(Args...)()
     return data;
 }
 
-string renderString(Args...)(string input, JSONValue data = JSONValue(), MissingKey onMissingKey = MissingKey.init)
+string renderString(Args...)(string input, JSONValue data = JSONValue(), MissingKey onMissingKey = MissingKey.init, string viewsDirectory = defaultViewsDir)
 {
-    return renderString(input, dataFromArgs!(Args), onMissingKey: onMissingKey);
+    return renderString(input, dataFromArgs!(Args), onMissingKey: onMissingKey, viewsDirectory: viewsDirectory);
 }
 
 string renderFile(Args...)(string path, JSONValue data = JSONValue(), MissingKey onMissingKey = MissingKey.init, string viewsDirectory = defaultViewsDir)

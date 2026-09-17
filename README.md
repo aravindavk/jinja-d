@@ -85,6 +85,7 @@ renderFile("index.html", data, onMissingkey: MissingKey.error);
 **viewsDirectory**
 
 ```d
+renderString("Hello {{ name }}!", data, viewsDirectory: "./templates");
 renderFile("index.html", data, viewsDirectory: "./templates");
 ```
 
@@ -141,6 +142,7 @@ auto tmpl2 = templateFromFile("index.html", onMissingkey: MissingKey.empty);
 **viewsDirectory**
 
 ```d
+auto tmpl = templateFromString("Hello {{ name }}!", viewsDirectory: "./templates");
 auto tmpl = templateFromFile("index.html", viewsDirectory: "./templates");
 ```
 
